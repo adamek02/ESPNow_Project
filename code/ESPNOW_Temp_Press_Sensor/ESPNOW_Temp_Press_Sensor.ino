@@ -4,11 +4,15 @@
 
 Adafruit_BMP280 bmp;
 
+String Device;
+
 float Temperature;
 int Pressure;
 int Temp_int;
 char Temp_name[8] = "Temp";
 char Press_name[8] = "Press";
+unsigned long lastTime = 0;  
+unsigned long timerDelay = 2000;  
 
 int Device_data = 0;
 
@@ -21,9 +25,6 @@ typedef struct struct_message {
 
 struct_message myData;
 
-unsigned long lastTime = 0;  
-unsigned long timerDelay = 2000;  
-
 void OnDataSent(uint8_t *mac_addr, uint8_t sendStatus) {
   Serial.print("Last Packet Send Status: ");
   if (sendStatus == 0){
@@ -32,6 +33,20 @@ void OnDataSent(uint8_t *mac_addr, uint8_t sendStatus) {
   else{
     Serial.println("Delivery fail");
   }
+}
+
+void OnDataRecv(uint8_t * mac, uint8_t *incomingData, uint8_t len) {
+  memcpy(&myData, incomingData, sizeof(myData));
+
+   Device = myData.name;
+   
+   if(Device == "T_delay"){
+  Serial.print("Bytes received: ");
+  Serial.println(len);
+  timerDelay = myData.data;
+  Serial.print(" Opoznienie w wyslaniu wiadomosci: ");
+  Serial.println(timerDelay);
+   }
 }
 
 
@@ -55,6 +70,9 @@ void setup() {
   }
 
   esp_now_set_self_role(ESP_NOW_ROLE_CONTROLLER);
+
+    // Register for a callback function that will be called when data is received
+  esp_now_register_recv_cb(OnDataRecv);
   esp_now_register_send_cb(OnDataSent);
 
   esp_now_add_peer(broadcastAddress, ESP_NOW_ROLE_SLAVE, 1, NULL, 0);
